@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tratamento de Erro OpenAI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .error-message {
+            background-color: #ffebee;
+            color: #b71c1c;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            display: none;
+            border-left: 4px solid #d32f2f;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Exemplo de Tratamento de Erro OpenAI</h1>
+    <p>Este é um exemplo de como tratar o erro de cota excedida da API da OpenAI.</p>
+    
+    <button id="callOpenAI">Chamar API da OpenAI</button>
+    
+    <div id="errorMessage" class="error-message">
+        <strong>Erro:</strong> <span id="errorText"></span>
+    </div>
+
+    <script>
+        // Função simulada que poderia lançar um erro de cota excedida
+        async function callOpenAIMock() {
+            // Simulando um erro de cota excedida
+            const error = new Error('Rate limit exceeded');
+            error.response = {
+                status: 429,
+                data: {
+                    error: {
+                        message: 'You exceeded your current quota, please check your plan and billing details.',
+                        type: 'insufficient_quota',
+                        code: 'insufficient_quota'
+                    }
+                }
+            };
+            throw error;
+        }
+
+        // Função para fazer a chamada real à API da OpenAI
+        async function callOpenAI() {
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            
+            try {
+                // Aqui você faria a chamada real para a API da OpenAI
+                // await openai.createCompletion({...});
+                
+                // Para este exemplo, estamos usando uma função mock que simula o erro
+                await callOpenAIMock();
+                
+                // Se chegou aqui, a chamada foi bem-sucedida
+                errorMessage.style.display = 'none';
+                
+            } catch (error) {
+                // Verifica se é um erro de cota excedida
+                if (error.response && 
+                    error.response.status === 429 && 
+                    error.response.data.error && 
+                    error.response.data.error.code === 'insufficient_quota') {
+                    
+                    // Exibe a mensagem personalizada
+                    errorText.textContent = 'Por gentileza coloque mais crédito!!!!';
+                    errorMessage.style.display = 'block';
+                    
+                } else {
+                    // Outros erros
+                    console.error('Erro na chamada da API:', error);
+                    errorText.textContent = 'Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.';
+                    errorMessage.style.display = 'block';
+                }
+            }
+        }
+
+        // Adiciona o evento de clique ao botão
+        document.getElementById('callOpenAI').addEventListener('click', callOpenAI);
+    </script>
+</body>
+</html>

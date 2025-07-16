@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exemplo de Tratamento de Erro OpenAI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .error-message {
+            background-color: #fff8e1;
+            color: #5d4037;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+            border-left: 6px solid #ffa000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        
+        .error-message h4 {
+            margin: 0 0 10px 0;
+            color: #e65100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .error-message p {
+            margin: 10px 0;
+        }
+        
+        .error-icon {
+            font-size: 20px;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        .container {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            width: 100%;
+            max-width: 400px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Exemplo de Tratamento de Erro OpenAI</h1>
+    
+    <div class="container">
+        <h2>Teste de Chamada à API</h2>
+        <p>Digite sua pergunta:</p>
+        <input type="text" id="questionInput" placeholder="Digite sua pergunta aqui...">
+        <button id="sendButton">Enviar para a OpenAI</button>
+        
+        <div id="errorMessage" class="error-message">
+            <strong>Erro:</strong> <span id="errorText"></span>
+        </div>
+        
+        <div id="response">
+            <!-- A resposta será exibida aqui -->
+        </div>
+    </div>
+
+    <!-- Links originais mantidos -->
+    <div class="container">
+        <h3>Links Úteis</h3>
+        <a href="http://178.156.132.234:5173/" target="_blank">Acessar app na porta 5173</a><br>
+        <a href="http://178.156.132.234:8501/" target="_blank">Acessar app na porta 8501</a>
+    </div>
+
+    <script>
+        // Função simulada que poderia lançar um erro de cota excedida
+        async function callOpenAIMock(question) {
+            // Simulando um atraso de rede
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Simulando um erro de cota excedida (descomente para testar o erro)
+            if (question.toLowerCase().includes('erro')) {
+                const error = new Error('Rate limit exceeded');
+                error.response = {
+                    status: 429,
+                    data: {
+                        error: {
+                            message: 'You exceeded your current quota, please check your plan and billing details.',
+                            type: 'insufficient_quota',
+                            code: 'insufficient_quota'
+                        }
+                    }
+                };
+                throw error;
+            }
+            
+            // Resposta simulada para quando não há erro
+            return {
+                data: {
+                    choices: [{
+                        message: {
+                            content: `Resposta simulada para: ${question}`
+                        }
+                    }]
+                }
+            };
+        }
+
+        // Função para fazer a chamada à API da OpenAI
+        async function callOpenAI(question) {
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const responseDiv = document.getElementById('response');
+            
+            // Limpa mensagens anteriores
+            errorMessage.style.display = 'none';
+            responseDiv.innerHTML = '';
+            
+            // Mostra carregamento
+            responseDiv.innerHTML = '<p>Processando sua pergunta...</p>';
+            
+            try {
+                // Aqui você faria a chamada real para a API da OpenAI
+                // const response = await openai.createChatCompletion({
+                //     model: "gpt-3.5-turbo",
+                //     messages: [{ role: "user", content: question }],
+                // });
+                
+                // Para este exemplo, estamos usando uma função mock que pode simular o erro
+                const response = await callOpenAIMock(question);
+                
+                // Exibe a resposta
+                responseDiv.innerHTML = `
+                    <p><strong>Sua pergunta:</strong> ${question}</p>
+                    <p><strong>Resposta:</strong> ${response.data.choices[0].message.content}</p>
+                `;
+                
+            } catch (error) {
+                console.error('Erro na chamada:', error);
+                
+                // Verifica se é um erro de cota excedida da OpenAI
+                const isOpenAIQuotaError = 
+                    // Caso 1: Erro padrão do SDK da OpenAI
+                    (error.code === 'insufficient_quota' && error.type === 'insufficient_quota') ||
+                    // Caso 2: Erro de resposta da API
+                    (error.response?.data?.error?.code === 'insufficient_quota') ||
+                    // Caso 3: Verificação por mensagem de erro
+                    (error.message && (
+                        error.message.includes('quota') || 
+                        error.message.includes('insufficient_quota') ||
+                        error.message.includes('RateLimitError') ||
+                        error.message.includes('exceeded your current quota')
+                    ));
+                
+                if (isOpenAIQuotaError) {
+                    // Exibe a mensagem personalizada para erro de cota
+                    errorMessage.innerHTML = `
+                        <h4><span class="error-icon">⚠️</span> Créditos Insuficientes</h4>
+                        <p>Parece que você atingiu o limite de créditos disponíveis em sua conta.</p>
+                        <p><strong>O que fazer agora?</strong></p>
+                        <ul style="margin: 10px 0 0 20px; padding: 0;">
+                            <li>Verifique o saldo da sua conta OpenAI</li>
+                            <li>Atualize seu plano ou adicione mais créditos</li>
+                            <li>Entre em contato com o suporte se precisar de ajuda</li>
+                        </ul>
+                    `;
+                    errorMessage.style.display = 'block';
+                    
+                    // Log detalhado para depuração
+                    console.error('Erro de cota excedida na OpenAI:', {
+                        code: error.code || error.response?.data?.error?.code,
+                        type: error.type || error.response?.data?.error?.type,
+                        message: error.message || error.response?.data?.error?.message
+                    });
+                    
+                } else {
+                    // Outros erros
+                    const errorMessage = error.message || 
+                                        error.response?.data?.error?.message || 
+                                        'Ocorreu um problema inesperado';
+                    errorMessageDiv.innerHTML = `
+                        <h4><span class="error-icon">⚠️</span> Ocorreu um erro</h4>
+                        <p>${errorMessage}. Por favor, tente novamente mais tarde.</p>
+                        <p>Se o problema persistir, entre em contato com o suporte técnico.</p>
+                    `;
+                    errorMessage.style.display = 'block';
+                    console.error('Erro na API:', error);
+                }
+                
+                responseDiv.innerHTML = '';
+            }
+        }
+
+        // Adiciona o evento de clique ao botão
+        document.getElementById('sendButton').addEventListener('click', function() {
+            const question = document.getElementById('questionInput').value.trim();
+            if (question) {
+                callOpenAI(question);
+            } else {
+                alert('Por favor, digite uma pergunta.');
+            }
+        });
+
+        // Permite enviar com Enter
+        document.getElementById('questionInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const question = this.value.trim();
+                if (question) {
+                    callOpenAI(question);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
